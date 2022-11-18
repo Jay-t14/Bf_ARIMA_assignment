@@ -1,0 +1,102 @@
+---
+title: "BF_assignment6"
+author: "Jay Trivedi"
+date: "2022-11-18"
+output: html_document
+---
+
+
+```{r}
+
+# ARIMA
+# Read in Data
+# I am using nybirths.dat
+library(tseries)
+require(forecast)
+nybirths <- scan("http://robjhyndman.com/tsdldata/data/nybirths.dat",skip=3)
+# Convert it into Time Series Data
+birthstimeseries <- ts(nybirths)
+#See how the plot looks
+plot(birthstimeseries)
+# There are test to tell you if series is stationary
+# ADF test says differences is required if p-value is > 0.05
+adf.test(birthstimeseries)
+# Kipps test says differences is required if p-value is < 0.05
+kpss.test(birthstimeseries)
+# There is also a function to tell you how much differences you need to do! 
+# NSDIFFS only works for seasonal data
+# I commented nsdiffs as my data is non seasonal 
+#nsdiffs(birthstimeseries)
+# However NDIFFS works with non-seasonal data
+ndiffs(birthstimeseries)
+#tsdisplay plots ACF,PACF and timeseries plot together. How cool! 
+tsdisplay(birthstimeseries)
+# take first order differences as indicated by ndiffs function
+#diff function can help you do this
+birthtimeseriesdiff1 <- diff(birthstimeseries, differences=1)
+# See if more differences is needed and how plots look
+tsdisplay(birthtimeseriesdiff1)
+ndiffs(birthtimeseriesdiff1)
+kpss.test(birthtimeseriesdiff1)
+adf.test(birthtimeseriesdiff1)
+#we now know that the d part in ARIMA(p,d,q) is 1. Now lets find p and q
+acf(birthtimeseriesdiff1, lag.max=20)
+Acf(birthtimeseriesdiff1, lag.max=20)
+#difference between acf and Acf is that Acf does not plot a spike at lag0.
+# Did you notice this? 
+# plot a correlogram
+Acf(birthtimeseriesdiff1, lag.max=20)
+# get the autocorrelation values
+Acf(birthtimeseriesdiff1, lag.max=20,plot=FALSE)
+# plot a partial correlogram
+Pacf(birthtimeseriesdiff1, lag.max=20)
+# get the partial autocorrelation values
+Pacf(birthtimeseriesdiff1, lag.max=20,plot=FALSE)
+# so possible models are ARMA(3,0), ARMA(0,1), ARMA(3,1)
+# Principle of Parsimony says choose one with the least number of parameters
+# You can also be lazy and just call auto.arima and let it do the work for you. 
+auto.arima(birthstimeseries)
+# or save the model. BIC and AIC is also given as values. 
+auto_fit <- auto.arima(birthstimeseries)
+auto_fit
+# There are lot of attributes. ?auto.arima will tell you about them
+attributes(auto_fit) 
+# or use airma and pass the values
+birthstimeseriesarima <- arima(birthstimeseries, order=c(0,1,1)) # fit an ARIMA(0,1,1) model
+birthstimeseriesarima
+# or use Arima. I will tell you the difference between them. 
+fit_Arima <- Arima(birthstimeseries, order=c(0,1,1))
+# Arima and arima are similar except arima does not allow for the constant c
+# unless d=0, and it does not return everything required for the forecast()
+# function. Finally, it does not allow the estimated model to be applied 
+# to new data (which is useful for checking forecast accuracy).
+# Consequently, it is recommended that you use Arima() instead
+# Lets call forecast. You can pass the confidence interval 
+forecast(fit_Arima,h=5,level=c(99.5))
+# or use defaults. 
+forecast(fit_Arima,h=5)
+# Or Plot it to see how it looks. Increase h and plot it. 
+plot(forecast(fit_Arima,h=5))
+# We are not finished till we do some residual analysis
+#ACF plot, Box Ljung test and histogram and Timeseries plot
+Acf(fit_Arima$residuals)
+Box.test(residuals(fit_Arima), lag=20, type="Ljung")
+plot.ts(residuals(fit_Arima))
+hist(fit_Arima$residuals)
+# Or do all the plots in one! 
+tsdiag(fit_Arima)
+# You can always simulate what ACF and PACF for ARIMA looks like
+sim.ar <- arima.sim(list(ar=c(0.4,0.4)),n=1000)
+sim.ma <- arima.sim(list(ma=c(0.6,-0.4)),n=1000)
+par(mfrow=c(2,2))
+Acf(sim.ar)
+Acf(sim.ma)
+Pacf(sim.ar)
+Pacf(sim.ma)
+
+
+
+
+
+
+```
